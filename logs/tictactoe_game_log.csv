@@ -1,4 +1,4 @@
-Game Time,Player 1 Name,Player 2 Name,Draw,Move,Winner
+Game Time,Player 1 Name,Player 2 Name,Draw,Winner Name,Move,Winner
 6.330452,Abhi,bot,False,Abhi,"[1, 1]",True
 8.512345,John,Doe,True,John,"[2, 3]",True
 4.712345,Alice,Bob,False,Bob,"[2, 3]",True
