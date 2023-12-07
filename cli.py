@@ -1,147 +1,95 @@
+import logging, csv
+from logic import TicTacToeLogic
+from datetime import datetime
 
-from logic import check_winner
-from logger import TicTacToeLogger
-import random
-import time
+class TicTacToeCLI:
+    def __init__(self, logic):
+        self.logic = logic
 
-class TicTacToeGame:
-    def __init__(self):
-        self.current_player = 'X'
-        self.board = self.make_empty_board()
-        self.winner = None
-        self.logger = TicTacToeLogger()
-        self.game_id = 1
+    def play_game(self):
+        player1_name = input("Enter Player 1 name: ")
+        player2_name = input("Enter Player 2 name (or 'bot' for AI): ")
 
-    def make_empty_board(self):
-        return [
-            [None, None, None],
-            [None, None, None],
-            [None, None, None],
-        ]
+        log_file = 'logs/tictactoe_game_log.csv'
+        fieldnames = ['Game Time', 'Player 1 Name', 'Player 2 Name', 'Draw', 'Winner','Player 1 Move','is_first_player_win']
+        #Only run this once, to set header
+        # with open(log_file, 'w', newline='') as csvfile:
+        #     csv_writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        #     csv_writer.writeheader()
 
-    def get_player_input(self, player_input=None):
-        prompt = f"Player {self.current_player}, please input your move (row, col): \n"
-        while True:
-            try:
-                if player_input is None:
-                    player_input = input(prompt)
-                    row, col = map(int, player_input.split(','))
-                # Check if the spot is already taken
-                if self.board[row][col] is not None:
-                    raise ValueError("Place already filled. Try again")
-                    player_input = None
-                    break
-                return row, col
-            except ValueError as e:
-                print(f"Invalid input: {e}\n")
-                player_input = None
-                continue
-                
-    def show_board(self):
-        board2 = [[' ' if cell is None else cell for cell in row] for row in self.board]
+        board = self.logic.make_empty_board()
+        start_time = datetime.now()
+        winner = None
+        char = 'X'
+        firstMove = []
+        firstMoveCount = 0
+        isFirstMoverWon = False
+        # logging.basicConfig(filename='logs/game.log', format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', encoding='utf-8', level=logging.DEBUG)
+        # logging.info('New Game begin')
+        game_type = logic.select_game_type()
 
-        print("\n")
-        print("\t     |     |")
-        print(f"\t  {board2[0][0]}  |  {board2[0][1]}  |  {board2[0][2]}")
-        print('\t_____|_____|_____')
-        print("\t     |     |")
-        print(f"\t  {board2[1][0]}  |  {board2[1][1]}  |  {board2[1][2]}")
-        print('\t_____|_____|_____')
-        print("\t     |     |")
-        print(f"\t  {board2[2][0]}  |  {board2[2][1]}  |  {board2[2][2]}")
-        print("\t     |     |")
-        print("\n")
-
-    def switch_player(self):
-        self.current_player = 'O' if self.current_player == 'X' else 'X'
-
-    def play_single_player(self):
-            while self.winner is None and any(None in row for row in self.board):
-                self.show_board()
-                try:
-                    if self.current_player == 'X':
-                        row, col = self.get_player_input()
-                    else:
-                        row, col = self.bot_move()
-                        print(f"Bot (O) chooses: {row}, {col}")
-
-                except ValueError:
-                    continue
-
-                self.board[row][col] = self.current_player
-                self.winner = check_winner(self.board)
-                self.switch_player()
-
-            self.show_board()
-            self.display_game_result()
+        while winner is None:
+            print("-------------------------------------")
+            logging.info("Turn Begins")
+            print("Begin Turn!")
+            print("It's", char, "turn!")
 
 
-    def bot_move(self):
-        # Simple random move for the bot
-        available_moves = [(i, j) for i in range(3) for j in range(3) if self.board[i][j] is None]
-        return random.choice(available_moves)
+            # Log player names
+            player = player1_name if char == 'X' else player2_name
+            timestamp = datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')
+            move = ''
 
 
-    def play_double_player(self):
-        while self.winner is None and any(None in row for row in self.board):
-            self.show_board()
-            row, col = self.get_player_input()               
-            self.board[row][col] = self.current_player
-            self.winner = check_winner(self.board)
-            self.switch_player()
+            self.logic.show_current_board(board=board)
+            if self.logic.get_current_player() == 'X' or game_type == 2:
+                print("Enter the row and column of the board you want to add the move to:")
+                i = int(input("Enter the row number (Options- 1 | 2 | 3):"))
+                j = int(input("Enter the column (Options- 1 | 2 | 3):"))
+                if firstMoveCount == 0:
+                    firstMove.append(i)
+                    firstMove.append(j)
+                firstMoveCount = firstMoveCount + 1
 
-        self.show_board()
-        self.display_game_result()
-
- 
-    def display_game_result(self):
-        if self.winner:
-            print(f"Winner is {self.winner}")
-            if choice == '1':
-                player1, player2 = 'Player 1', 'Bot'
+                board, is_illegal = self.logic.make_move(board=board, i=i, j=j)
+                # if an illegal move happens, do not change the turn
+                if not is_illegal:
+                    winner = self.logic.get_winner(board)
             else:
-                player1, player2 = 'Player 1', 'Player 2'
-            
-            end_time = time.time()  # Record the end time of the game
-            game_duration = round(end_time - start_time, 2)
-            self.logger.log_game_data(self.game_id, self.winner, player1, player2, game_duration)
-            self.game_id += 1
-        else:
-            print("It's a tie!")
+                self.logic.make_bot_move(board=board)
+                move = 'Bot'
+            winner = self.logic.get_winner(board)
 
+            if winner!= None:
+                end_time = datetime.now()
+                game_time = (end_time - start_time).total_seconds()
 
+                player_winner = ' '
 
+                if winner == 'X':
+                    player_winner = player1_name
+                elif winner == 'O' and game_type == 2:
+                    player_winner = player2_name
+                elif winner == 'O' and game_type == 1:
+                    player_winner = 'Bot'
+
+                if player_winner == player1_name:
+                    isFirstMoverWon = True
+                elif player_winner == player2_name:
+                     isFirstMoverWon = False
+
+                with open(log_file, 'a', newline='') as csvfile:
+                    csv_writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                    csv_writer.writerow({'Game Time': game_time, 'Player 1 Name': player1_name, 'Player 2 Name': player2_name,
+                                        'Draw': winner == 'Draw', 'Winner': player_winner, 'Player 1 Move':firstMove,'is_first_player_win':isFirstMoverWon})
+
+            print("Winner",winner)
+            if winner == 'Draw':
+                print("Game Draw")
+            else:
+                logging.info("Winner")
 
 if __name__ == '__main__':
-    print("Welcome to Tic-Tac-Toe!")
-
-   
-
-    while True:
-        
-        print("Select game mode:")
-        print("1. Single Player vs Bot")
-        print("2. Double Player")
-        choice = input("Enter your choice (1 or 2): ")
-
-        if choice not in ['1', '2']:
-            print("Invalid choice. Please enter 1 or 2.")
-            continue
-
-        game = TicTacToeGame()
-
-        if choice == '1':
-            print("You are playing against the bot!")
-            start_time = time.time()  # Record the start time of the game
-            game.play_single_player()
-          
-        else:
-            print("You are playing against another player!")
-            start_time = time.time()  # Record the start time of the game
-            game.play_double_player()
-
-                            
-
-        play_again = input("Do you want to play again? (yes/no): ").lower()
-        if play_again != 'yes':
-            break
+    logic = TicTacToeLogic()
+    cli = TicTacToeCLI(logic)
+    cli.play_game()
